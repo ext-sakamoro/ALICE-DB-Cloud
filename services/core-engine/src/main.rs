@@ -158,7 +158,7 @@ async fn create_db(State(_s): State<Arc<AppState>>, Json(req): Json<CreateDbRequ
     Json(CreateDbResponse {
         db_id: uuid::Uuid::new_v4().to_string(), name: req.name.clone(),
         engine, compression, status: "created".into(),
-        connection_string: format!("alice-db://{}:5432/{}", "db-cloud.alice-platform.com", req.name),
+        connection_string: format!("alice-db://{}:5432/{}", "db-cloud.alicelaw.net", req.name),
     })
 }
 
