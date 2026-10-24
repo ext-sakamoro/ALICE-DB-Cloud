@@ -205,15 +205,27 @@ async fn query(
         ]);
     }
     s.stats.lock().unwrap().total_queries += 1;
+    let elapsed_us = t.elapsed().as_micros();
+    // a query past the client's timeout returns no rows and says so
+    let (status, rows_affected, rows) = if timed_out(elapsed_us, req.timeout_ms) {
+        ("timeout", 0, Vec::new())
+    } else {
+        ("completed", row_count, rows)
+    };
     Json(QueryResponse {
         query_id: uuid::Uuid::new_v4().to_string(),
-        status: "completed".into(),
+        status: status.into(),
         database: db,
-        rows_affected: row_count,
+        rows_affected,
         columns: cols,
         rows,
-        elapsed_us: t.elapsed().as_micros(),
+        elapsed_us,
     })
+}
+
+/// whether a query that took `elapsed_us` microseconds ran past the client's `timeout_ms`
+fn timed_out(elapsed_us: u128, timeout_ms: Option<u64>) -> bool {
+    timeout_ms.is_some_and(|ms| elapsed_us > u128::from(ms) * 1000)
 }
 
 async fn write(
@@ -335,4 +347,27 @@ fn fnv1a(data: &[u8]) -> u64 {
         h = h.wrapping_mul(0x0100_0000_01b3);
     }
     h
+}
+
+#[cfg(test)]
+mod tests {
+    use super::timed_out;
+
+    #[test]
+    fn no_timeout_never_times_out() {
+        assert!(!timed_out(u128::MAX, None));
+    }
+
+    #[test]
+    fn the_timeout_is_in_milliseconds_and_inclusive() {
+        assert!(!timed_out(5_000, Some(5)));
+        assert!(timed_out(5_001, Some(5)));
+        assert!(timed_out(1, Some(0)));
+        assert!(!timed_out(0, Some(0)));
+    }
+
+    #[test]
+    fn a_large_timeout_does_not_overflow() {
+        assert!(!timed_out(u128::from(u64::MAX), Some(u64::MAX)));
+    }
 }
