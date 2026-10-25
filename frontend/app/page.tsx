@@ -133,7 +133,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="text-center py-8 text-gray-600 text-sm border-t border-gray-800">
-        ALICE-DB-Cloud — Licensed under AGPL-3.0-or-later
+        ALICE-DB-Cloud — LicenseRef-Proprietary
       </footer>
     </div>
   );
